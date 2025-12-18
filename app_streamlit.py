@@ -732,7 +732,7 @@ base_row = build_row_from_base(df, df.index.get_loc(base_global_index))
 # Global sidebar what-if controls (shared across tabs)
 # ---------------------------------
 st.sidebar.markdown("---")
-st.sidebar.markdown("## Applies to Tab_5 & Tab_6")
+st.sidebar.markdown("## Applies to Tab_4 & Tab_6")
 
 with st.sidebar.container():
     st.sidebar.markdown("## 🔧 What-If Controls")
