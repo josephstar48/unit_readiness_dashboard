@@ -20,6 +20,15 @@ except Exception:
 
 
 
+# -------------------------------
+# App Config
+# -------------------------------
+st.set_page_config(
+    page_title="ASR²D — Airborne Soldier Readiness & Risk Prediction Dashboard",
+    layout="wide",
+)
+
+
 # --- High-visibility radio styles (sidebar-safe) ---
 st.markdown("""
 <style>
@@ -94,14 +103,6 @@ try:
 except Exception:
     HAS_SCIPY = False
 
-
-# -------------------------------
-# App Config
-# -------------------------------
-st.set_page_config(
-    page_title="ASR²D — Airborne Soldier Readiness & Risk Prediction Dashboard",
-    layout="wide",
-)
 
 
 APP_TITLE = "🪂Airborne Soldier Readiness & Risk Prediction Dashboard (ASR²D)"
@@ -969,7 +970,7 @@ with tabs[0]:
 
             st.plotly_chart(fig, width='stretch')
 
-            commander_caption("Observed rates help leaders identify where risks are concentrated, enabling informed decisions before writing and executing new policies and in preparation for field exercises, deployments, and ensuring readiness and risk mitigation.")
+            commander_caption("Observed percentages help leaders identify where risk is concentrated, enabling informed decision-making before developing and executing policies and preparing for field exercises and deployments—ultimately enhancing soldier and unit readiness, reducing risk, and supporting mission success.")
     else:
         st.info("No observed risk columns found (e.g., high_burnout_risk).")
 
