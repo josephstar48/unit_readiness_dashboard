@@ -970,7 +970,7 @@ with tabs[0]:
 
             st.plotly_chart(fig, width='stretch')
 
-            commander_caption("Observed percentages help leaders identify where risk is concentrated, enabling informed decision-making before developing and executing policies and preparing for field exercises and deployments—ultimately enhancing soldier and unit readiness, reducing risk, and supporting mission success.")
+            commander_caption("Observed percentages help leaders identify where risk is concentrated, enabling informed decision-making before developing and executing policies and preparing for field exercises and deployments—ultimately enhancing Soldier and unit readiness, reducing risk, and supporting mission success.")
     else:
         st.info("No observed risk columns found (e.g., high_burnout_risk).")
 
@@ -1301,14 +1301,14 @@ with tabs[5]:
         st.stop()  # ✅ critical: prevent stale state / stale outputs
 
 # Slider is on the same scale as sleep_score (0–10), but allow +/- adjustments
-    sleep_boost = st.slider(
-        "Unit-wide sleep change (points on 0–10 scale)",
-        min_value=0.0,
-        max_value=10.0,
-        value=1.0,
-        step=0.1,
-        key="unit_sleep_boost_slider",
-    )
+    # sleep_boost = st.slider(
+    #     "Unit-wide sleep change (points on 0–10 scale)",
+    #     min_value=0.0,
+    #     max_value=10.0,
+    #     value=1.0,
+    #     step=0.1,
+    #     key="unit_sleep_boost_slider",
+    # )
 
 # ✅ Make sampling optional
     use_sampling = st.checkbox(
@@ -1370,7 +1370,7 @@ with tabs[5]:
     after_parts = []
 
     # If you still want to show the sleep_boost slider in Tab 6, keep it in this label
-    after_parts.append(f"Sleep {sleep_boost:+.1f}")
+    # after_parts.append(f"Sleep {sleep_boost:+.1f}")
 
     # Also show what changed via shared overrides (relative to selected soldier baseline)
     def _delta(col: str) -> float:
@@ -1687,12 +1687,14 @@ with tabs[6]:
     with c1:
         st.markdown("### 📝 Counseling Analysis")
         st.write("Analyze counseling statements to detect morale/burnout signals")
-        commander_caption("Adds early warning signals from narrative counseling notes before performance declines.")
+        commander_caption("Provides early warning indicators from written counseling notes, helping leaders act before performance declines.")
 
     with c2:
         st.markdown("### 🧠 Graph Networks")
-        st.write("Model relationships between training events, leadership climate, and readiness over time.")
-        commander_caption("Helps leaders understand downstream effects when one training/stress factor changes.")
+        st.write("Graph Networks show how people, events, or factors are connected and how a change in one affects the others.")
+        st.write("Models how training events, leadership climate, and readiness are connected over time.")
+        st.write("If training tempo increases, a graph network can show how that impacts morale, fatigue, and readiness over time.")
+        commander_caption("Helps leaders see how changes in one training or stress factor affect readiness across the unit.")
 
     with c3:
         st.markdown("### 📱 Mobile Optimization")
@@ -1759,8 +1761,8 @@ with tabs[6]:
 
     # Build simulated dataframe (sleep increased)
     df_sim = df_sim_base.copy()
-    if "sleep_score" in df_sim.columns:
-        df_sim["sleep_score"] = (df_sim["sleep_score"].astype(float) + sleep_boost).clip(0.0, 10.0)
+    # if "sleep_score" in df_sim.columns:
+    #     df_sim["sleep_score"] = (df_sim["sleep_score"].astype(float) + sleep_boost).clip(0.0, 10.0)
 
     # Helper to compute predicted unit risk rate from a logistic model
     def unit_predicted_rate(pipe, X: pd.DataFrame) -> float:
@@ -1778,14 +1780,14 @@ with tabs[6]:
         sim_rate = unit_predicted_rate(pipe, df_sim)
 
         delta_pp = (sim_rate - base_rate) * 100  # percentage points
-        results.append({
-            "Risk Type": t,
-            "Baseline (Predicted %)": base_rate * 100,
-            f"After +{sleep_boost:.1f} sleep (Predicted %)": sim_rate * 100,
-            "Change (percentage points)": delta_pp
-        })
+        # results.append({
+        #     "Risk Type": t,
+        #     "Baseline (Predicted %)": base_rate * 100,
+        #     f"After +{sleep_boost:.1f} sleep (Predicted %)": sim_rate * 100,
+        #     "Change (percentage points)": delta_pp
+        # })
 
-    sim_df = pd.DataFrame(results).sort_values("Change (percentage points)")
+    # sim_df = pd.DataFrame(results).sort_values("Change (percentage points)")
 
 #     sim_df["Baseline (Predicted %)"] = sim_df["Baseline (Predicted %)"].round(1)
 #     sim_df[f"After +{sleep_boost:.1f} sleep (Predicted %)"] = sim_df[
