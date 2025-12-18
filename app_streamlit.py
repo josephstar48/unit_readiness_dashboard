@@ -744,7 +744,7 @@ with st.sidebar.container():
 
 
 st.title(APP_TITLE)
-st.caption("Synthetic Data / Statistical Testing / Machine Learning risk & Readiness Predictions")
+st.caption("Synthetic Data / Statistical Testing / Machine Learning Risk & Readiness Predictions")
 
 tabs = st.tabs([
     "1) Overview_TAB 1",
@@ -796,159 +796,6 @@ elif REG_MODELS:
 if not FEATURE_COLS:
     st.warning("Could not infer FEATURE_COLS from models. Add FEATURE_COLS manually (raw columns used in training).")
 
-
-# -------------------------------
-# Tab 1: Overview
-# -------------------------------
-with tabs[0]:
-    st.subheader("Dataset Summary")
-    st.write(f"Synthetic Dataset Rows Total: **{len(df):,}**")
-    # st.write("Filters:", {k: v for k, v in active_filters.items() if v != "All"} or "None")
-
-    # High-level metrics
-    c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
-
-    # Try common columns
-    if safe_col(df_view, "soldier_readiness"):
-        c1.metric("% Soldier Readiness", f"{df_view['soldier_readiness'].mean()*100:.1f}%")
-    else:
-        c1.metric("% Soldier Readiness", "N/A")
-
-    if safe_col(df_view, "retention_rate"):
-        c2.metric("% Retention Rate", f"{df_view['retention_rate'].mean()*100:.1f}%")
-    else:
-        c2.metric("% Retention Rate", "N/A")
-
-    for col, label, slot in [
-        ("high_burnout_risk", "% High Burnout Risk", c3),
-        ("high_risk_of_injury", "% Injury Risk", c4),
-    ]:
-        r = observed_rate(df_view, col)
-        slot.metric(label, f"{(100*r):.1f}%" if r is not None else "N/A")
-
-    commander_caption("This overview displays notional readiness and risk levels for XVIII Airborne Corps.")
-
-    st.markdown("---")
-    st.subheader("Exploration Data Analysis / Data Distribution")
-    eda_cols = st.columns(3)
-
-    if safe_col(df_view, "stress_score"):
-        with eda_cols[0]:
-            plot_hist(df_view["stress_score"], "Stress Score Distribution")
-            commander_caption("Higher stress is consistently associated with elevated burnout and performance risk.")
-    if safe_col(df_view, "sleep_score"):
-        with eda_cols[1]:
-            plot_hist(df_view["sleep_score"], "Sleep Score Distribution")
-            commander_caption("Lower sleep quality can amplify risks even when physical readiness is strong.")
-    if safe_col(df_view, "OPTEMPO"):
-        with eda_cols[2]:
-            plot_hist(df_view["OPTEMPO"], "OPTEMPO Distribution")
-            commander_caption("Higher OPTEMPO indicates sustained workload intensity and reduced recovery time.")
-
-
-    st.markdown("---")
-    st.subheader("Observed Risks")
-
-    observed_targets = [c for c in ["high_burnout_risk", "high_risk_of_injury", "ucmj", "poor_performance", "non_deployable"] if c in df.columns]
-    if observed_targets:
-        target = st.selectbox("Choose an observed risk flag", observed_targets)
-
-        groupby_opts = [c for c in ["brigade_level", "mos", "rank", "division_level"] if c in df.columns]
-        grp = st.selectbox("Group by", groupby_opts) if groupby_opts else None
-
-        if grp:
-            tmp = df_view[[grp, target]].dropna()
-            tmp[target] = tmp[target].astype(int)
-
-            rates = (
-                tmp.groupby(grp)[target]
-                .mean()
-                .sort_values(ascending=False)
-                .head(20)
-            )
-
-            plot_df = rates.reset_index().rename(columns={target: "rate"})
-            plot_df["percent"] = plot_df["rate"] * 100
-
-            fig = px.bar(
-                plot_df,
-                x=grp,
-                y="rate",
-                hover_data={"rate": False, "percent": ":.1f"},
-                labels={"rate": "Rate"},
-                title=f"Observed {target} Rate By {grp}"
-            )
-
-        # show bars as percent on hover + better y-axis formatting
-            fig.update_traces(
-                hovertemplate=f"{grp}: %{{x}}<br>{target} rate: %{{customdata[0]:.1f}}%<extra></extra>",
-                customdata=plot_df[["percent"]].to_numpy()
-            )
-            fig.update_yaxes(tickformat=".0%")
-
-            st.plotly_chart(fig, width='stretch')
-
-            commander_caption("Observed rates help leaders identify where risks are concentrated, enabling informed decisions before writing and executing new policies and in preparation for field exercises, deployments, and ensuring readiness and risk mitigation.")
-    else:
-        st.info("No observed risk columns found (e.g., high_burnout_risk).")
-
-    st.markdown("---")
-    st.subheader("Selected Soldier 'current row' (static data)")
-    st.dataframe(base_row, width='content', height=150)
-
-
-# -------------------------------
-# Tab 2: Hypothesis Test
-# -------------------------------
-with tabs[1]:
-    st.subheader("Hypothesis Test — OPTEMPO trend vs Stress (Welch t-test)")
-
-    if not HAS_SCIPY:
-        st.warning("SciPy not installed, so Welch t-test can’t run here. Install scipy to enable this tab.")
-        st.stop()
-
-    if "optempo_trend" not in df.columns or "stress_score" not in df.columns:
-        st.info("Missing required columns: optempo_trend and/or stress_score.")
-        st.stop()
-
-    st.markdown("""
-**Question:** The average stress level for Soldiers with a **high** OPTEMPO is less than or equal to the average stress level for Soldiers with a sustainable OPTEMPO.
-
-- **H₀:** μ_improving = μ_declining  
-- **H₁:** μ_declining > μ_improving (one-sided)  
-- **α:** 0.05
-""")
-
-    alpha = st.slider("Significance level α", 0.01, 0.10, 0.05, 0.01)
-
-    gA = df_view[df_view["optempo_trend"].astype(str).str.lower() == "improving"]["stress_score"].dropna()
-    gB = df_view[df_view["optempo_trend"].astype(str).str.lower() == "declining"]["stress_score"].dropna()
-
-    c1, c2, c3 = st.columns(3)
-    c1.metric("n (improving)", f"{len(gA):,}")
-    c2.metric("n (declining)", f"{len(gB):,}")
-    c3.metric("Mean stress (declining - improving)", f"{(gB.mean() - gA.mean()):.2f}")
-
-    # Welch t-test (two-sided), then convert to one-sided
-    t_stat, p_two = ttest_ind(gB, gA, equal_var=False, nan_policy="omit")  # B vs A
-    # one-sided p for H1: mean(B) > mean(A)
-    p_one = p_two / 2 if t_stat > 0 else 1 - (p_two / 2)
-
-    st.write(f"**Welch t-test:** t = `{t_stat:.3f}`, one-sided p = `{p_one:.6f}`")
-    decision = "Reject H₀" if p_one < alpha else "Fail to reject H₀"
-    st.success(f"Decision at α={alpha:.2f}: **{decision}**")
-
-    # Plot distributions (boxplot-ish using hist overlays)
-    # fig, ax = plt.subplots(figsize=(7, 3.5))
-    # ax.hist(gA, bins=30, alpha=0.6, label="improving")
-    # ax.hist(gB, bins=30, alpha=0.6, label="declining")
-    # ax.set_title("Stress Score Distribution: improving vs declining OPTEMPO trend")
-    # ax.set_xlabel("stress_score")
-    # ax.set_ylabel("Count")
-    # ax.legend()
-    # st.pyplot(fig, clear_figure=True)
-
-    commander_caption("If declining OPTEMPO trend is linked to higher stress, leaders can treat OPTEMPO stability and recovery time as a measurable risk lever.")
 
 
 # -------------------------------
@@ -1029,10 +876,112 @@ def risk_gauge(prob: float, label: str):
         st.success("Lower risk (< 40%).")
 
 
+
+
 # -------------------------------
-# Tab 3: Soldier Burnout Risk Model
+# Tab 1: Overview
 # -------------------------------
-with tabs[2]:
+with tabs[0]:
+    st.subheader("Dataset Summary")
+    st.write(f"Synthetic Dataset Rows Total: **{len(df):,}**")
+    # st.write("Filters:", {k: v for k, v in active_filters.items() if v != "All"} or "None")
+
+    # High-level metrics
+    c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
+
+    # Try common columns
+    if safe_col(df_view, "soldier_readiness"):
+        c1.metric("% Soldier Readiness", f"{df_view['soldier_readiness'].mean()*100:.1f}%")
+    else:
+        c1.metric("% Soldier Readiness", "N/A")
+
+    if safe_col(df_view, "retention_rate"):
+        c2.metric("% Retention", f"{df_view['retention_rate'].mean()*100:.1f}%")
+    else:
+        c2.metric("% Retention", "N/A")
+
+    for col, label, slot in [
+        ("high_burnout_risk", "% Burnout Risk", c3),
+        ("high_risk_of_injury", "% Injury Risk", c4),
+    ]:
+        r = observed_rate(df_view, col)
+        slot.metric(label, f"{(100*r):.1f}%" if r is not None else "N/A")
+
+    commander_caption("This overview displays notional readiness and risk levels for XVIII Airborne Corps.")
+
+    st.markdown("---")
+    st.subheader("Exploration Data Analysis / Data Distribution")
+    eda_cols = st.columns(3)
+
+    if safe_col(df_view, "stress_score"):
+        with eda_cols[0]:
+            plot_hist(df_view["stress_score"], "Stress Score Distribution")
+            commander_caption("Higher stress is consistently associated with elevated burnout and performance risk.")
+    if safe_col(df_view, "sleep_score"):
+        with eda_cols[1]:
+            plot_hist(df_view["sleep_score"], "Sleep Score Distribution")
+            commander_caption("Lower sleep quality can amplify risks even when physical readiness is strong.")
+    if safe_col(df_view, "OPTEMPO"):
+        with eda_cols[2]:
+            plot_hist(df_view["OPTEMPO"], "OPTEMPO Distribution")
+            commander_caption("Higher OPTEMPO indicates sustained workload intensity and reduced recovery time.")
+
+
+    st.markdown("---")
+    st.subheader("Observed Risks")
+
+    observed_targets = [c for c in ["high_burnout_risk", "high_risk_of_injury", "ucmj", "poor_performance", "non_deployable"] if c in df.columns]
+    if observed_targets:
+        target = st.selectbox("Choose an observed risk flag", observed_targets)
+
+        groupby_opts = [c for c in ["brigade_level", "mos", "rank", "division_level"] if c in df.columns]
+        grp = st.selectbox("Group by", groupby_opts) if groupby_opts else None
+
+        if grp:
+            tmp = df_view[[grp, target]].dropna()
+            tmp[target] = tmp[target].astype(int)
+
+            rates = (
+                tmp.groupby(grp)[target]
+                .mean()
+                .sort_values(ascending=False)
+                .head(20)
+            )
+
+            plot_df = rates.reset_index().rename(columns={target: "rate"})
+            plot_df["percent"] = plot_df["rate"] * 100
+
+            fig = px.bar(
+                plot_df,
+                x=grp,
+                y="rate",
+                hover_data={"rate": False, "percent": ":.1f"},
+                labels={"rate": "Rate"},
+                title=f"Observed {target} Rate By {grp}"
+            )
+
+        # show bars as percent on hover + better y-axis formatting
+            fig.update_traces(
+                hovertemplate=f"{grp}: %{{x}}<br>{target} rate: %{{customdata[0]:.1f}}%<extra></extra>",
+                customdata=plot_df[["percent"]].to_numpy()
+            )
+            fig.update_yaxes(tickformat=".0%")
+
+            st.plotly_chart(fig, width='stretch')
+
+            commander_caption("Observed rates help leaders identify where risks are concentrated, enabling informed decisions before writing and executing new policies and in preparation for field exercises, deployments, and ensuring readiness and risk mitigation.")
+    else:
+        st.info("No observed risk columns found (e.g., high_burnout_risk).")
+
+    st.markdown("---")
+    st.subheader("Selected Soldier 'current row' (static data)")
+    st.dataframe(base_row, width='content', height=150)
+
+
+# -------------------------------
+# Tab 2: Soldier Burnout Risk Model
+# -------------------------------
+with tabs[1]:
     st.subheader("Soldier Burnout Risk Prediction Model")
 
     model_key = f"{LOGREG_PREFIX}high_burnout_risk"
@@ -1068,10 +1017,10 @@ with tabs[2]:
 
 
 # -------------------------------
-# Tab 4: Soldier Readiness Score Model
+# Tab 3: Soldier Readiness and Retention
 # -------------------------------
 
-with tabs[3]:
+with tabs[2]:
     st.subheader("Readiness Score Prediction")
 
     # Prefer XGB if present, else RF, else Linear
@@ -1147,12 +1096,11 @@ with tabs[3]:
         st.info("")
 
 
-
 # -------------------------------
-# Tab 5: Soldier Injury & UCMJ Risk
+# Tab 4: Soldier Injury & UCMJ Risk
 # -------------------------------
 
-with tabs[4]:
+with tabs[3]:
 
     st.subheader("Individual Soldier - Predicted Performance Risks")
 
@@ -1199,6 +1147,64 @@ with tabs[4]:
 
 
         st.markdown("---")
+
+
+
+# -------------------------------
+# Tab 5: Hypothesis Test
+# -------------------------------
+with tabs[4]:
+    st.subheader("Hypothesis Test — OPTEMPO trend vs Stress (Welch t-test)")
+
+    if not HAS_SCIPY:
+        st.warning("SciPy not installed, so Welch t-test can’t run here. Install scipy to enable this tab.")
+        st.stop()
+
+    if "optempo_trend" not in df.columns or "stress_score" not in df.columns:
+        st.info("Missing required columns: optempo_trend and/or stress_score.")
+        st.stop()
+
+    st.markdown("""
+**Question:** The average stress level for Soldiers with a **high** OPTEMPO is less than or equal to the average stress level for Soldiers with a sustainable OPTEMPO.
+
+- **H₀:** μ_improving = μ_declining  
+- **H₁:** μ_declining > μ_improving (one-sided)  
+- **α:** 0.05
+""")
+
+    alpha = st.slider("Significance level α", 0.01, 0.10, 0.05, 0.01)
+
+    gA = df_view[df_view["optempo_trend"].astype(str).str.lower() == "improving"]["stress_score"].dropna()
+    gB = df_view[df_view["optempo_trend"].astype(str).str.lower() == "declining"]["stress_score"].dropna()
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("n (improving)", f"{len(gA):,}")
+    c2.metric("n (declining)", f"{len(gB):,}")
+    c3.metric("Mean stress (declining - improving)", f"{(gB.mean() - gA.mean()):.2f}")
+
+    # Welch t-test (two-sided), then convert to one-sided
+    t_stat, p_two = ttest_ind(gB, gA, equal_var=False, nan_policy="omit")  # B vs A
+    # one-sided p for H1: mean(B) > mean(A)
+    p_one = p_two / 2 if t_stat > 0 else 1 - (p_two / 2)
+
+    st.write(f"**Welch t-test:** t = `{t_stat:.3f}`, one-sided p = `{p_one:.6f}`")
+    decision = "Reject H₀" if p_one < alpha else "Fail to reject H₀"
+    st.success(f"Decision at α={alpha:.2f}: **{decision}**")
+
+    # Plot distributions (boxplot-ish using hist overlays)
+    # fig, ax = plt.subplots(figsize=(7, 3.5))
+    # ax.hist(gA, bins=30, alpha=0.6, label="improving")
+    # ax.hist(gB, bins=30, alpha=0.6, label="declining")
+    # ax.set_title("Stress Score Distribution: improving vs declining OPTEMPO trend")
+    # ax.set_xlabel("stress_score")
+    # ax.set_ylabel("Count")
+    # ax.legend()
+    # st.pyplot(fig, clear_figure=True)
+
+    commander_caption("If declining OPTEMPO trend is linked to higher stress, leaders can treat OPTEMPO stability and recovery time as a measurable risk lever.")
+
+
+
 
 
 
