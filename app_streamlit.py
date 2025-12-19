@@ -718,7 +718,7 @@ if max_rows == 0:
     st.error("No rows match your filters. Reset filters.")
     st.stop()
 
-pick_by = st.sidebar.radio("Select by:", ["Dataset Row index/number", "Random"], horizontal=False)
+pick_by = st.sidebar.radio("Select by:", ["DoD ID #", "Random"], horizontal=False)
 if pick_by == "Random":
     base_idx = int(np.random.randint(0, max_rows))
 else:
@@ -958,7 +958,7 @@ with tabs[0]:
                 y="rate",
                 hover_data={"rate": False, "percent": ":.1f"},
                 labels={"rate": "Rate"},
-                title=f"Observed {target} Rate By {grp}"
+                title=f"Observed {target} % By {grp}"
             )
 
         # show bars as percent on hover + better y-axis formatting
@@ -1022,7 +1022,7 @@ with tabs[1]:
 # -------------------------------
 
 with tabs[2]:
-    st.subheader("Readiness Score Prediction")
+    st.subheader("Soldier Readiness Score Prediction")
 
     # Prefer XGB if present, else RF, else Linear
     readiness_pipe = None
@@ -1074,7 +1074,7 @@ with tabs[2]:
             break
 
     if retention_pipe is not None and "retention_rate" in df.columns:
-        st.subheader("Retention Score Prediction")
+        st.subheader("Soldier Retention Score Prediction")
         st.info("")
 
         pred_r = predict_regression(retention_pipe, X_one)
@@ -1103,7 +1103,7 @@ with tabs[2]:
 
 with tabs[3]:
 
-    st.subheader("Individual Soldier - Predicted Performance Risks")
+    st.subheader("Soldier Predicted Performance Risks")
 
     # Apply overrides to ONE soldier
     X_one = apply_overrides(
