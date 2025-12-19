@@ -735,7 +735,7 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("## Applies to Tab_4 & Tab_6")
 
 with st.sidebar.container():
-    st.sidebar.markdown("## 🔧 What-If Controls")
+    st.sidebar.markdown("## 🧪 What-If Controls")
     shared_overrides = what_if_controls_T5(
         base_row,
         context="shared",
@@ -851,7 +851,7 @@ def what_if_controls(base_row, context: str):
 
     if "acft_failure" in base_row.columns:
         overrides["acft_failure"] = int(c6.checkbox(
-            "ACFT failure",
+            "ACFT Failure",
             value=bool(base_row["acft_failure"].iloc[0]),
             key=f"{context}_acft_failure_cb"
         ))
@@ -1124,7 +1124,7 @@ with tabs[3]:
         st.stop()
 
 
-    st.markdown("### Baseline Observed Rates in Filtered Soldier")
+    st.markdown("### Baseline Observed Percentage in Filtered Soldier")
 
     cols = st.columns(min(5, len(risk_targets)))
     for i, t in enumerate(risk_targets[:5]):
